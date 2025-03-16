@@ -4,3 +4,5 @@ export interface AlgorithmForm {
 	device: string
 	fps: number
 }
+
+export type VideoList = Record<'name' | 'pth' | 'time' | 'uid', string>

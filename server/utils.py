@@ -1,7 +1,9 @@
+import os
 import cv2
 import yaml
 import time
 import torch
+import signal
 import subprocess
 from queue import Queue
 from threading import Thread
@@ -13,7 +15,7 @@ def config_init(pth):
     file = open(pth,"r",encoding="utf-8")
     config = yaml.load(file.read(), Loader=yaml.FullLoader)
     config["ffmpeg"]["command"] = command = [
-        'ffmpeg', '-y', '-f', 'rawvideo', '-vcodec', 'rawvideo', '-pix_fmt',
+        'ffmpeg','-hwaccel','cuvid', '-y', '-f', 'rawvideo', '-vcodec', 'rawvideo', '-pix_fmt',
         'bgr24', '-s', "{}x{}".format(1280, 720), '-r',
         str(config["ffmpeg"]["fps"]), '-i', '-', '-c:v', 'libx264', '-b:v', '2500k', '-pix_fmt',
         'yuv420p', '-preset', 'ultrafast', '-f', 'flv', config["rtmp"]["to"]
@@ -75,30 +77,21 @@ class FrameReadLoop(Thread):
         self.pth = pth
         self.net = net
         self.device = device
-        self.pipe = subprocess.Popen(command, shell=False, stdin=subprocess.PIPE)
- 
+        self.pipe = subprocess.Popen(command, shell=False, stdin=subprocess.PIPE, preexec_fn=os.setsid)
+        self.running = True
+
     def run(self):
         cap = cv2.VideoCapture(self.pth)
-        while True:
+        while self.running:
             _, frame = cap.read()
+            if frame is None:
+                break
             n, res_frame = _count_crowd_image(frame,self.net,self.device)
-            # self.queue.put(res_frame)
             self.pipe.stdin.write(res_frame)
-'''
-class PushFrameLoop(Thread):
-    def __init__(self, command, queue):
-        super(PushFrameLoop, self).__init__()
-        self.pipe = subprocess.Popen(command, shell=False, stdin=subprocess.PIPE)
-        self.queue = queue
-
-    def run(self):
-        while True:
-            if self.queue.empty()!= True:
-                frame = self.queue.get()
-                self.pipe.stdin.write(frame)
-'''
-
-
+        # os.system("killall -9 ffmpeg")
+        self.pipe.terminate()
+        self.pipe.wait()
+        os.killpg(self.pipe.pid, signal.SIGTERM)
 
 
 

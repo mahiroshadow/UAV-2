@@ -35,13 +35,23 @@
 						<div>自动播放<ElSwitch v-model="isAuto"></ElSwitch></div>
 					</div>
 				</template>
-				<ul class="list-none min-h-80">
-					<li></li>
-					<li></li>
-					<li></li>
-					<li></li>
-					<li></li>
-					<li></li>
+				<ul class="list-none min-h-80 w-full text-lg p-0 overflow-y-auto">
+					<li
+						v-for="(video, index) in videoList"
+						@click="choose(index)"
+						class="mt-4 w-full flex justify-around items-center cursor-pointer rounded-md"
+						:style="
+							selected == index
+								? {
+										backgroundColor: '#DCDCDC',
+										transition: 'background-color .5s ease-out'
+								  }
+								: { backgroundColor: 'white', transition: 'background-color .5s ease-out' }
+						"
+					>
+						<span>{{ video.name }}</span>
+						<span>{{ video.time }}</span>
+					</li>
 				</ul>
 			</ElCard>
 		</div>
@@ -49,22 +59,40 @@
 </template>
 
 <script setup lang="ts">
+import mpegts from 'mpegts.js'
+import { createVideo, destroyVideo } from './utils/video'
+import { videoChange } from '@/api/algorithm'
 import { onMounted, ref } from 'vue'
-import { createVideo } from './utils/video'
+import { AlgorithmForm, type VideoList } from './utils/interface'
 import { ElForm, ElFormItem, ElSelect, ElOption, ElInput, ElCard, ElSwitch } from 'element-plus'
-import { AlgorithmForm } from './utils/interface'
+
+const videoList = ref<VideoList[]>([
+	{ name: '南大街前半段', pth: 'model/test.mp4', time: '01:10', uid: 'home' },
+	{ name: '南大街后半段', pth: 'model/test1.mp4', time: '01:14', uid: 'home1' }
+])
+const selected = ref<number>(0)
 const isAuto = ref<boolean>(true)
-const videoRef = ref<HTMLVideoElement | null>()
 const form = ref<AlgorithmForm>({
 	name: '',
 	region: '',
 	device: '',
 	fps: 45
 })
+const videoRef = ref<HTMLVideoElement | null>()
+const flvPlayer = ref<ReturnType<typeof mpegts.createPlayer> | null>()
+const choose = (idx: number) => {
+	selected.value = idx
+	const { pth, uid } = videoList.value[idx]
+	const data = { pth, device: 'cuda:0', uid }
+	videoChange(data)
+	if (flvPlayer.value) {
+		console.log('销毁')
+		destroyVideo(flvPlayer.value)
+	}
+	flvPlayer.value = createVideo(videoRef.value!, `http://121.43.36.206:6003/live?port=1936&app=live&stream=${videoList.value[idx].uid}`)
+}
 
-onMounted(() => {
-	// createVideo()
-})
+onMounted(() => {})
 </script>
 
 <style lang="scss" scoped></style>

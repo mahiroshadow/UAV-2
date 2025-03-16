@@ -21,19 +21,18 @@ const createVideo = (mountedDom: HTMLVideoElement, stream: string) => {
 				liveBufferLatencyMinRemain: 0.2
 			}
 		)
-		mountedDom.addEventListener('loadeddata', function () {
-			const frameRate = Math.round(mountedDom.duration / mountedDom.currentTime)
-			mountedDom.textContent = '视频帧率：' + frameRate
-			console.log(mountedDom.textContent)
-		})
-		// flvPlayer.on(mpegts.Events.STATISTICS_INFO, (statisticsInfo) => {
-		//   console.log(statisticsInfo)
-		// })
-		// mpegts
 		flvPlayer.attachMediaElement(mountedDom)
 		flvPlayer.load()
 		flvPlayer.play()
+		return flvPlayer
 	}
 }
 
-export { createVideo }
+const destroyVideo = (flvPlayer: ReturnType<typeof mpegts.createPlayer>) => {
+	flvPlayer.pause()
+	flvPlayer.unload()
+	flvPlayer.detachMediaElement()
+	flvPlayer.destroy()
+}
+
+export { createVideo, destroyVideo }
