@@ -1,0 +1,13 @@
+# config file
+
+rtmp: 
+ from: rtmp://121.43.36.206:6001/live/stream
+ to: &to rtmp://121.43.36.206:6002/live/home
+
+ffmpeg:
+ fps: 45
+
+model:
+ save: model/pth_save/model_best.pth 
+ device: cuda:0 
+
